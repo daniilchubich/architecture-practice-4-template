@@ -3,15 +3,27 @@ package integration
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"testing"
 	"time"
 )
 
 const baseAddress = "http://balancer:8090"
+const team = "gods"
 
 var client = http.Client{
 	Timeout: 3 * time.Second,
+}
+
+func getData(key string) (*http.Response, error) {
+	path := fmt.Sprintf("%s/api/v1/some-data", baseAddress)
+
+	queryParams := url.Values{}
+	queryParams.Set("key", key)
+	path += "?" + queryParams.Encode()
+
+	return client.Get(path)
 }
 
 func TestBalancer(t *testing.T) {
@@ -22,7 +34,7 @@ func TestBalancer(t *testing.T) {
 
 	senders := make(map[string]bool)
 	for i := 0; i < 10; i++ {
-		resp, err := client.Get(fmt.Sprintf("%s/api/v1/some-data", baseAddress))
+		resp, err := getData(team)
 	if err != nil {
 		t.Error(err)
 	}
@@ -39,6 +51,14 @@ func TestBalancer(t *testing.T) {
 	if count < 3 {
 		t.Errorf("expected at least 3 senders, got %d", count)
 	}
+
+	resp, err := getData(team)
+	if err != nil {
+		t.Error(err)
+	}
+	if (resp.StatusCode != http.StatusOK) {
+		t.Errorf("expected status code 200, got %d", resp.StatusCode)
+	}
 }
 
 func BenchmarkBalancer(b *testing.B) {
@@ -50,7 +70,7 @@ func BenchmarkBalancer(b *testing.B) {
     b.ResetTimer()
 
     for i := 0; i < b.N; i++ {
-        resp, err := client.Get(fmt.Sprintf("%s/api/v1/some-data", baseAddress))
+        resp, err := getData(team)
         if err != nil {
             b.Error(err)
         }

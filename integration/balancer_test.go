@@ -59,6 +59,14 @@ func TestBalancer(t *testing.T) {
 	if (resp.StatusCode != http.StatusOK) {
 		t.Errorf("expected status code 200, got %d", resp.StatusCode)
 	}
+
+	resp, err = getData("bad-key")
+	if err != nil {
+		t.Error(err)
+	}
+	if (resp.StatusCode != http.StatusNotFound) {
+		t.Errorf("expected status code 404, got %d", resp.StatusCode)
+	}
 }
 
 func BenchmarkBalancer(b *testing.B) {

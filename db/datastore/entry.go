@@ -6,11 +6,11 @@ import (
 	"fmt"
 )
 
-type entry struct {
+type Entry struct {
 	key, value string
 }
 
-func (e *entry) Encode() []byte {
+func (e *Entry) Encode() []byte {
 	kl := len(e.key)
 	vl := len(e.value)
 	size := kl + vl + 12
@@ -23,7 +23,7 @@ func (e *entry) Encode() []byte {
 	return res
 }
 
-func (e *entry) Decode(input []byte) {
+func (e *Entry) Decode(input []byte) {
 	kl := binary.LittleEndian.Uint32(input[4:])
 	keyBuf := make([]byte, kl)
 	copy(keyBuf, input[8:kl+8])

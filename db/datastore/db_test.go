@@ -1,15 +1,18 @@
 package datastore
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+
 )
 
 func TestDb_Put(t *testing.T) {
-	dir, err := ioutil.TempDir("", "test-db")
+	dir, err := os.MkdirTemp("", "test-db")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +99,7 @@ func TestDb_Put(t *testing.T) {
 	}
 
 	t.Run("create new out file", func(t *testing.T) {
-		db.segmentSize = 200
+		db.segmentSize = 600
 		for _, pair := range pairs2 {
 			err := db.Put(pair[0], pair[1])
 			if err != nil {
@@ -165,4 +168,42 @@ func TestDb_Put(t *testing.T) {
 			t.Errorf("ERROR!\nExpected: 2;\nGot: %v", n)
 		}
 	})
+}
+
+func TestDb_Checksum(t *testing.T) {
+	tmpFile, err := ioutil.TempFile("", "datastore_test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpFile.Name())
+
+	key := "testKey"
+	value := "testValue"
+	checksum := calculateChecksum(key + "+" + value)
+
+	entry := Entry{
+		key:      key,
+		value:    value,
+		checksum: checksum,
+	}
+
+	encodedEntry := entry.Encode()
+	size := uint32(len(encodedEntry))
+
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.LittleEndian, size)
+	buf.Write(encodedEntry)
+
+	tmpFile.Write(buf.Bytes())
+	tmpFile.Close()
+
+	block := &block{
+		index:   map[string]int64{key: 0},
+		outPath: tmpFile.Name(),
+	}
+
+	_, err = block.get(key)
+	if err == nil {
+		t.Fatal("Expected error due to invalid checksum, but got none")
+	}
 }

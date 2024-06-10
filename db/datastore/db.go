@@ -45,12 +45,12 @@ func NewDb(dir string) (*Db, error) {
 		return nil, err
 	}
 
-	if len(filesNames) != 0 { // call recovery, if directory is no empty
+	if len(filesNames) != 0 {
 		err := db.recover(filesNames)
 		if err != nil {
 			return nil, err
 		}
-	} else { // create the first block, if directory is empty
+	} else {
 		err = db.addNewBlockToDB()
 		if err != nil {
 			return nil, err

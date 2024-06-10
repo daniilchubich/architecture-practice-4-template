@@ -3,7 +3,9 @@ package datastore
 import (
 	"bufio"
 	"context"
+	"crypto/sha1"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"os"
@@ -131,9 +133,14 @@ func (b *block) get(key string) (string, error) {
 	}
 
 	reader := bufio.NewReader(file)
-	value, err := readValue(reader)
+	value, ch, err := readValue(reader)
 	if err != nil {
 		return "", err
+	}
+
+
+	if ch != calculateChecksum(key + value) {
+		return "", fmt.Errorf("corrupted file")
 	}
 
 	_, err = file.Seek(position, 0)
@@ -144,11 +151,11 @@ func (b *block) get(key string) (string, error) {
 }
 
 func (b *block) put(key, value string) error {
-
 	e := Entry{
 		key:   key,
 		value: value,
 	}
+	e.checksum = calculateChecksum(key + value)
 
 	resultCh := make(chan writeResult)
 	b.writeCh <- writeArgument{resultCh, e.Encode()}
@@ -163,6 +170,13 @@ func (b *block) put(key, value string) error {
 	}
 
 	return result.err
+}
+
+
+func calculateChecksum(data string) string {
+	hasher := sha1.New()
+	hasher.Write([]byte(data))
+	return hex.EncodeToString(hasher.Sum(nil))
 }
 
 type writeResult struct {

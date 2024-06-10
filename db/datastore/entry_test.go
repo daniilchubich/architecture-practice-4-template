@@ -7,7 +7,7 @@ import (
 )
 
 func TestEntry_Encode(t *testing.T) {
-	e := Entry{"key", "value"}
+	e := Entry{"key", "value", calculateChecksum("key+value")}
 	e.Decode(e.Encode())
 	if e.key != "key" {
 		t.Error("incorrect key")
@@ -18,13 +18,17 @@ func TestEntry_Encode(t *testing.T) {
 }
 
 func TestReadValue(t *testing.T) {
-	e := Entry{"key", "test-value"}
+	ch := calculateChecksum("test-value")
+	e := Entry{"key", "test-value", ch}
 	data := e.Encode()
-	v, err := readValue(bufio.NewReader(bytes.NewReader(data)))
+	v, chRead, err := readValue(bufio.NewReader(bytes.NewReader(data)))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if v != "test-value" {
-		t.Errorf("Got bat value [%s]", v)
+		t.Errorf("Got bad value [%s]", v)
+	}
+	if ch != chRead {
+		t.Errorf("Got bad checksum [%s]", ch)
 	}
 }
